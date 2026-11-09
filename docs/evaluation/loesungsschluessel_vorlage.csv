@@ -1,0 +1,4 @@
+ap_id;mail_datei;lieferant_nr;rechnungsnr;format;betrag_brutto;kategorie;ergebnis_historie;ergebnis_soll;grund_soll;bezug;freigabestufe_soll;sachkonto_soll;kostenstelle_soll;skonto_frist_soll;sicherheit;geprueft_von
+AP-2026-XXXXXX;;70254;90004697;pdf-text;10014,16;K0;bezahlt;freigeben;Bestellung und Wareneingang passen, IBAN wie Stamm;BE26-11263 / WE26-11467, WE26-11549;Geschäftsführung;5100;;05.10.2026;mittel;BA
+AP-2026-XXXXXX;;;;pdf-text;29623,86;K2;;klären;IBAN weicht vom Stamm ab, Absender-Domain kesterman statt kestermann;BE26-11341;Geschäftsführung;;;;hoch;BA
+AP-2026-XXXXXX;;;;pdf-text;6646,15;K3;;ablehnen;Absender weder im Stamm noch im Handelsregister, keine Bestellnummer;keiner;Abteilungsleitung;;;;hoch;BA
