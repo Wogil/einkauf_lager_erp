@@ -9,14 +9,14 @@ Szenario-Fällen des Unternehmens Voßkamp Pumpenwerk:
 
 | Fall | Thema | Stand |
 |---|---|---|
-| **08** | Eingangsrechnungen prüfen und zur Freigabe vorbereiten | ✅ Durchstich von Ende zu Ende (deterministische Baseline) |
+| **08** | Eingangsrechnungen prüfen und zur Freigabe vorbereiten | ✅ Durchstich von Ende zu Ende (deterministische Variante B1) |
 | 04 | Angebot aus Kundenanfrage | geplant |
 | 11 | Lieferantenangebote vergleichen | geplant |
 
 Grundsätze (siehe [Entscheidungslog](docs/entscheidungslog.md)):
 
-- **Human in the Loop:** Die Lösung schlägt vor, ein Mensch entscheidet. Nichts wird automatisch gebucht, bezahlt
-  oder an Stammdaten geändert.
+- **Human in the Loop:** Unklare Fälle gehen immer mit begründetem Vorschlag an einen Menschen. Nichts wird
+  automatisch bezahlt oder an Stammdaten geändert.
 - **Regeln vor Sprachmodell:** Beträge, Freigabegrenzen und Prüfentscheidungen beruhen auf nachvollziehbaren Daten
   und Regeln. Ein LLM leitet keine Werte oder Geschäftsregeln ab.
 - **Generisch vs. unternehmensspezifisch:** Ablauf, Prüfmechanik und Agenten sind generisch; Datenquellen,
@@ -27,7 +27,8 @@ Grundsätze (siehe [Entscheidungslog](docs/entscheidungslog.md)):
 ## Aktueller Stand auf `main`: Fall 08 als Baseline
 
 Der Ordner [`fall08-stack/`](fall08-stack/) enthält einen lauffähigen Prototyp für Fall 08. Er arbeitet
-**rein deterministisch** und ist damit die Baseline (L1), gegen die der agentische Workflow gemessen wird.
+**rein deterministisch** und ist damit die Variante **B1**, gegen die die agentische (C1) und die hybride
+Variante (D1) gemessen werden. In diesem Stand entscheidet bei jeder Rechnung ein Mensch.
 
 ```
  Rechnungsmail ──▶ n8n ──▶ Prüfdienst (Regelprüfung) ──▶ Vorschlagsmail ──▶ Sachbearbeitung
@@ -45,6 +46,27 @@ Der Ordner [`fall08-stack/`](fall08-stack/) enthält einen lauffähigen Prototyp
 
 Details zu Prüfregeln, Architektur und getesteten Fällen: [`fall08-stack/README.md`](fall08-stack/README.md)
 · Prozessmodelle (BPMN 2.0): [`fall08-stack/docs/bpmn/`](fall08-stack/docs/bpmn/)
+
+---
+
+## Zielbild: hybride Prüfung (D1)
+
+```
+                 ┌─▶ deterministische Prüfung (Regeln) ─┐
+ Rechnung ──▶ n8n┤                                       ├─▶ beide ok + Kriterien erfüllt ─▶ automatisch freigeben
+                 └─▶ Agent (eigene Datenbankabfragen) ──┘    sonst ──────────────────────────▶ Vorschlag an Buchhaltung
+```
+
+- Deterministische Prüfung und Agent prüfen **parallel und unabhängig**. Die deterministische Prüfung bleibt die Basis.
+- **Automatische Freigabe** nur, wenn beide keine Auffälligkeit melden und der Kriterienkatalog erfüllt ist
+  (z. B. bekannter Lieferant, Betrag unter einer konfigurierten Schwelle). Alles andere wird mit Vorschlag eskaliert.
+- **Korrekturhinweis an den Lieferanten** (z. B. vergessene Position, Tippfehler) nur, wenn Lieferant, Absenderadresse
+  und Rechnung verifiziert sind.
+- Schwellenwerte und Kriterien sind Konfiguration, nicht Code. Darüber wird die Übertragbarkeit gezeigt: feste
+  Anschlussstellen (Datenbank, Kanal, Freigabe per Mail), unternehmensspezifische Werte nur in der Konfiguration.
+
+Die Abweichung vom Fallbrief („die Buchhaltung entscheidet“) bei der automatischen Freigabe wird in der
+Dokumentation begründet.
 
 ---
 
@@ -126,34 +148,33 @@ docker compose up -d --build --force-recreate pruefdienst n8n   # nur nach Code-
 
 ## Evaluation
 
-Wir vergleichen mehrere Varianten auf denselben, fachlich geprüften Testfällen
+Drei Varianten auf denselben, fachlich geprüften Testfällen
 ([Evaluationskonzept](docs/evaluation/evaluationskonzept_fall08.md)):
 
 | Variante | Beschreibung | Status |
 |---|---|---|
-| B1 | Einfacher Prompt, ohne Tools und Regeln | geplant |
-| B2 | Einfaches Skript mit wenigen naheliegenden Prüfungen | geplant |
-| **L1** | **Regelprüfung des Prüfdienstes (dieser Stand auf `main`)** | ✅ |
-| L2 | Regeln als Leitplanke + Agent (Lesefehler, Zuordnung, Abwägung, Begründung) | nächster Schritt |
-| L3 | Regeln + spezialisierte Agenten mit Prüfer | Ausblick |
+| **B1** | **Nur deterministisch: Regelprüfung des Prüfdienstes (dieser Stand auf `main`)** | ✅ |
+| C1 | Nur agentisch: Agent prüft mit eigenen Datenbankabfragen | in Arbeit |
+| D1 | Hybrid: B1 und C1 parallel, automatische Freigabe nur bei Übereinstimmung und erfüllten Kriterien | in Arbeit |
 
-Gemessen werden Genauigkeit, Konsistenz, Klär- bzw. Eskalationsquote, Kosten und Zeit sowie die Übertragbarkeit
-auf andere Unternehmenskontexte.
+Kennzahlen je Variante, im Programm erfasst und als Tabelle exportiert: Kosten pro Rechnung, Fehlerrate nach
+Fehlerart, Eskalationsrate (wie oft muss ein Mensch eingreifen) und Durchlaufzeit. Daraus folgt auch die
+Wirtschaftlichkeitsbetrachtung (Kosten pro Rechnung gegenüber Entwicklungsaufwand, abhängig vom Rechnungsvolumen).
 
 ---
 
 ## Nächste Schritte
 
-1. **Branch für den agentischen Workflow (L2):** Agent über die MCP-Tools des Prüfdienstes, Leitplanken bei der
-   Validierung des Vorschlags, Vergleich L1 gegen L2
-2. **Mandanten-Konfiguration auslagern:** Freigabegrenzen, Toleranzen und Kontierung aus dem Code in eine
-   Konfigurationsdatei; Datenzugriff über eine Adapter-Schnittstelle
-3. Fälle 04 und 11 auf derselben Grundlage
+1. **Agentischer Workflow (C1) und hybride Variante (D1)** in eigenen Branches, inklusive Erfassung der Kennzahlen
+2. **Kriterienkatalog** mit Schwellenwerten, begründet aus Interviews und Unterlagen
+3. **Schwellenwerte und Kriterien in die Konfiguration** auslagern
+4. Test: Rechnungen als Bild (150 dpi) direkt an ein Modell mit Bilderkennung statt OCR
+5. Fälle 04 und 11 auf derselben Grundlage
 
 ## Arbeitsweise im Repo
 
 - `main` enthält immer einen lauffähigen Stand.
-- Neue Arbeit in eigenen Branches, z. B. `feature/agentic-workflow`, und per Pull Request zurück nach `main`.
+- Neue Arbeit in eigenen Branches, z. B. `eval/c1-agentisch` und `eval/d1-hybrid`, per Pull Request zurück nach `main`.
 - Entscheidungen ins [Entscheidungslog](docs/entscheidungslog.md), Protokolle nach `docs/protokolle/`,
   KI-Nutzung nach [`docs/ki-nutzung.md`](docs/ki-nutzung.md).
 - Keine Zugangsdaten und keine Szenario-Daten einchecken.
