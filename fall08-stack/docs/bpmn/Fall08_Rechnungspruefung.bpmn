@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs_Fall08" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Fall08-Generator" exporterVersion="1.0">
+<bpmn:collaboration id="Collab_Fall08" name="Fall 08 – Eingangsrechnungen prüfen und zur Freigabe vorbereiten">
+<bpmn:participant id="P_Lief" name="Lieferant" />
+<bpmn:participant id="P_SB" name="Kreditorenbuchhaltung (Sachbearbeitung Voßkamp)" processRef="Process_P_SB" />
+<bpmn:participant id="P_Sys" name="Rechnungseingangsprüfung (Lösung Fall 08)" processRef="Process_P_Sys" />
+<bpmn:messageFlow id="Msg_P_Lief_s_start" name="Rechnung (Mail mit PDF / XML)" sourceRef="P_Lief" targetRef="s_start" />
+<bpmn:messageFlow id="Msg_t_mail_sb_start" name="Vorschlag mit Begründung" sourceRef="t_mail" targetRef="sb_start" />
+<bpmn:messageFlow id="Msg_sb_end_t_recv" name="Entscheidung" sourceRef="sb_end" targetRef="t_recv" />
+</bpmn:collaboration>
+<bpmn:process id="Process_P_SB" isExecutable="false">
+<bpmn:startEvent id="sb_start" name="Vorschlag erhalten"><bpmn:outgoing>Flow_sb_start_sb_task</bpmn:outgoing><bpmn:messageEventDefinition id="MED_sb_start" /></bpmn:startEvent>
+<bpmn:userTask id="sb_task" name="Vorschlag prüfen und entscheiden"><bpmn:incoming>Flow_sb_start_sb_task</bpmn:incoming><bpmn:outgoing>Flow_sb_task_sb_end</bpmn:outgoing></bpmn:userTask>
+<bpmn:endEvent id="sb_end" name="Entscheidung per Link"><bpmn:incoming>Flow_sb_task_sb_end</bpmn:incoming><bpmn:messageEventDefinition id="MED_sb_end" /></bpmn:endEvent>
+<bpmn:sequenceFlow id="Flow_sb_start_sb_task" sourceRef="sb_start" targetRef="sb_task" />
+<bpmn:sequenceFlow id="Flow_sb_task_sb_end" sourceRef="sb_task" targetRef="sb_end" />
+<bpmn:textAnnotation id="an_sb"><bpmn:text>freigeben · klären · ablehnen · Vorschlag falsch (mit Kommentar). Freigabestufe nach Betrag laut Konfiguration</bpmn:text></bpmn:textAnnotation>
+<bpmn:association id="Assoc_an_sb" sourceRef="sb_end" targetRef="an_sb" />
+</bpmn:process>
+<bpmn:process id="Process_P_Sys" isExecutable="false">
+<bpmn:laneSet id="LaneSet_P_Sys">
+<bpmn:lane id="L_n8n" name="n8n – Eingang und Steuerung"><bpmn:flowNodeRef>s_start</bpmn:flowNodeRef><bpmn:flowNodeRef>g_rech</bpmn:flowNodeRef><bpmn:flowNodeRef>e_keine</bpmn:flowNodeRef><bpmn:flowNodeRef>g_dopp</bpmn:flowNodeRef><bpmn:flowNodeRef>e_skip</bpmn:flowNodeRef><bpmn:flowNodeRef>g_mode</bpmn:flowNodeRef><bpmn:flowNodeRef>t_mail</bpmn:flowNodeRef><bpmn:flowNodeRef>t_recv</bpmn:flowNodeRef></bpmn:lane>
+<bpmn:lane id="L_pd" name="Prüfdienst – Regeln, Daten, Protokoll"><bpmn:flowNodeRef>t_lesen</bpmn:flowNodeRef><bpmn:flowNodeRef>t_lief</bpmn:flowNodeRef><bpmn:flowNodeRef>t_best</bpmn:flowNodeRef><bpmn:flowNodeRef>t_form</bpmn:flowNodeRef><bpmn:flowNodeRef>t_regel</bpmn:flowNodeRef><bpmn:flowNodeRef>g_mb</bpmn:flowNodeRef><bpmn:flowNodeRef>t_valid</bpmn:flowNodeRef><bpmn:flowNodeRef>t_prot</bpmn:flowNodeRef><bpmn:flowNodeRef>e_done</bpmn:flowNodeRef></bpmn:lane>
+<bpmn:lane id="L_ag" name="Rechnungs-Agent (SRW)"><bpmn:flowNodeRef>t_agent</bpmn:flowNodeRef><bpmn:flowNodeRef>b_timer</bpmn:flowNodeRef><bpmn:flowNodeRef>g_ma</bpmn:flowNodeRef></bpmn:lane>
+</bpmn:laneSet>
+<bpmn:startEvent id="s_start" name="Rechnungsmail eingegangen"><bpmn:outgoing>Flow_s_start_g_rech</bpmn:outgoing><bpmn:messageEventDefinition id="MED_s_start" /></bpmn:startEvent>
+<bpmn:exclusiveGateway id="g_rech" name="Rechnung im Anhang?"><bpmn:incoming>Flow_s_start_g_rech</bpmn:incoming><bpmn:outgoing>Flow_g_rech_e_keine</bpmn:outgoing><bpmn:outgoing>Flow_g_rech_g_dopp</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:endEvent id="e_keine" name="Kein Rechnungsvorgang"><bpmn:incoming>Flow_g_rech_e_keine</bpmn:incoming></bpmn:endEvent>
+<bpmn:exclusiveGateway id="g_dopp" name="Bereits verarbeitet?"><bpmn:incoming>Flow_g_rech_g_dopp</bpmn:incoming><bpmn:outgoing>Flow_g_dopp_e_skip</bpmn:outgoing><bpmn:outgoing>Flow_g_dopp_t_lesen</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:endEvent id="e_skip" name="Übersprungen"><bpmn:incoming>Flow_g_dopp_e_skip</bpmn:incoming></bpmn:endEvent>
+<bpmn:serviceTask id="t_lesen" name="Beleg lesen (XRechnung, ZUGFeRD, PDF, OCR)"><bpmn:incoming>Flow_g_dopp_t_lesen</bpmn:incoming><bpmn:outgoing>Flow_t_lesen_t_lief</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:serviceTask id="t_lief" name="Lieferant, Register und Bankdaten prüfen"><bpmn:incoming>Flow_t_lesen_t_lief</bpmn:incoming><bpmn:outgoing>Flow_t_lief_t_best</bpmn:outgoing><bpmn:property id="Prop_t_lief_ds_data" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DIA_ds_data_t_lief"><bpmn:sourceRef>ds_data</bpmn:sourceRef><bpmn:targetRef>Prop_t_lief_ds_data</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:serviceTask id="t_best" name="Bestellung, Preis und Wareneingang abgleichen"><bpmn:incoming>Flow_t_lief_t_best</bpmn:incoming><bpmn:outgoing>Flow_t_best_t_form</bpmn:outgoing><bpmn:property id="Prop_t_best_ds_data" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DIA_ds_data_t_best"><bpmn:sourceRef>ds_data</bpmn:sourceRef><bpmn:targetRef>Prop_t_best_ds_data</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:serviceTask id="t_form" name="Formales, Dubletten, Skonto, Freigabeweg"><bpmn:incoming>Flow_t_best_t_form</bpmn:incoming><bpmn:outgoing>Flow_t_form_t_regel</bpmn:outgoing><bpmn:property id="Prop_t_form_ds_cfg" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DIA_ds_cfg_t_form"><bpmn:sourceRef>ds_cfg</bpmn:sourceRef><bpmn:targetRef>Prop_t_form_ds_cfg</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:serviceTask id="t_regel" name="Regelvorschlag bilden"><bpmn:incoming>Flow_t_form_t_regel</bpmn:incoming><bpmn:outgoing>Flow_t_regel_g_mode</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="g_mode" name="Agent aktiv?"><bpmn:incoming>Flow_t_regel_g_mode</bpmn:incoming><bpmn:outgoing>Flow_g_mode_t_agent</bpmn:outgoing><bpmn:outgoing>Flow_g_mode_g_mb</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:task id="t_agent" name="Befunde abwägen und begründen"><bpmn:incoming>Flow_g_mode_t_agent</bpmn:incoming><bpmn:outgoing>Flow_t_agent_g_ma</bpmn:outgoing></bpmn:task>
+<bpmn:boundaryEvent id="b_timer" name="Zeitlimit (Rückfall: Regelvorschlag)" attachedToRef="t_agent"><bpmn:outgoing>Flow_b_timer_g_ma</bpmn:outgoing><bpmn:timerEventDefinition id="TED_b_timer"><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:boundaryEvent>
+<bpmn:exclusiveGateway id="g_ma" name=""><bpmn:incoming>Flow_t_agent_g_ma</bpmn:incoming><bpmn:incoming>Flow_b_timer_g_ma</bpmn:incoming><bpmn:outgoing>Flow_g_ma_g_mb</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:exclusiveGateway id="g_mb" name=""><bpmn:incoming>Flow_g_mode_g_mb</bpmn:incoming><bpmn:incoming>Flow_g_ma_g_mb</bpmn:incoming><bpmn:outgoing>Flow_g_mb_t_valid</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="t_valid" name="Vorschlag validieren (Leitplanken) und speichern"><bpmn:incoming>Flow_g_mb_t_valid</bpmn:incoming><bpmn:outgoing>Flow_t_valid_t_mail</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:sendTask id="t_mail" name="Vorschlagsmail senden"><bpmn:incoming>Flow_t_valid_t_mail</bpmn:incoming><bpmn:outgoing>Flow_t_mail_t_recv</bpmn:outgoing></bpmn:sendTask>
+<bpmn:receiveTask id="t_recv" name="Entscheidung empfangen (signierter Link)"><bpmn:incoming>Flow_t_mail_t_recv</bpmn:incoming><bpmn:outgoing>Flow_t_recv_t_prot</bpmn:outgoing></bpmn:receiveTask>
+<bpmn:serviceTask id="t_prot" name="Entscheidung protokollieren"><bpmn:incoming>Flow_t_recv_t_prot</bpmn:incoming><bpmn:outgoing>Flow_t_prot_e_done</bpmn:outgoing><bpmn:dataOutputAssociation id="DOA_t_prot_ds_log"><bpmn:targetRef>ds_log</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:serviceTask>
+<bpmn:endEvent id="e_done" name="Vorgang abgeschlossen"><bpmn:incoming>Flow_t_prot_e_done</bpmn:incoming></bpmn:endEvent>
+<bpmn:dataStoreReference id="ds_data" name="Unternehmensdaten über Adapter (WAVE, ArchivPlus, Register, Banken)" />
+<bpmn:dataStoreReference id="ds_cfg" name="Mandanten-Konfiguration (Grenzen, Toleranzen, Kontierung)" />
+<bpmn:dataStoreReference id="ds_log" name="Prüfprotokoll (GoBD)" />
+<bpmn:sequenceFlow id="Flow_s_start_g_rech" sourceRef="s_start" targetRef="g_rech" />
+<bpmn:sequenceFlow id="Flow_g_rech_e_keine" name="nein" sourceRef="g_rech" targetRef="e_keine" />
+<bpmn:sequenceFlow id="Flow_g_rech_g_dopp" name="ja" sourceRef="g_rech" targetRef="g_dopp" />
+<bpmn:sequenceFlow id="Flow_g_dopp_e_skip" name="ja" sourceRef="g_dopp" targetRef="e_skip" />
+<bpmn:sequenceFlow id="Flow_g_dopp_t_lesen" name="nein" sourceRef="g_dopp" targetRef="t_lesen" />
+<bpmn:sequenceFlow id="Flow_t_lesen_t_lief" sourceRef="t_lesen" targetRef="t_lief" />
+<bpmn:sequenceFlow id="Flow_t_lief_t_best" sourceRef="t_lief" targetRef="t_best" />
+<bpmn:sequenceFlow id="Flow_t_best_t_form" sourceRef="t_best" targetRef="t_form" />
+<bpmn:sequenceFlow id="Flow_t_form_t_regel" sourceRef="t_form" targetRef="t_regel" />
+<bpmn:sequenceFlow id="Flow_t_regel_g_mode" sourceRef="t_regel" targetRef="g_mode" />
+<bpmn:sequenceFlow id="Flow_g_mode_t_agent" name="ja" sourceRef="g_mode" targetRef="t_agent" />
+<bpmn:sequenceFlow id="Flow_g_mode_g_mb" name="nein" sourceRef="g_mode" targetRef="g_mb" />
+<bpmn:sequenceFlow id="Flow_t_agent_g_ma" sourceRef="t_agent" targetRef="g_ma" />
+<bpmn:sequenceFlow id="Flow_b_timer_g_ma" sourceRef="b_timer" targetRef="g_ma" />
+<bpmn:sequenceFlow id="Flow_g_ma_g_mb" sourceRef="g_ma" targetRef="g_mb" />
+<bpmn:sequenceFlow id="Flow_g_mb_t_valid" sourceRef="g_mb" targetRef="t_valid" />
+<bpmn:sequenceFlow id="Flow_t_valid_t_mail" sourceRef="t_valid" targetRef="t_mail" />
+<bpmn:sequenceFlow id="Flow_t_mail_t_recv" sourceRef="t_mail" targetRef="t_recv" />
+<bpmn:sequenceFlow id="Flow_t_recv_t_prot" sourceRef="t_recv" targetRef="t_prot" />
+<bpmn:sequenceFlow id="Flow_t_prot_e_done" sourceRef="t_prot" targetRef="e_done" />
+<bpmn:textAnnotation id="an_agent"><bpmn:text>Nur lesende Tools. Das LLM leitet keine Beträge oder Regeln ab; bei Lesefehlern Kennzeichnung statt stiller Korrektur</bpmn:text></bpmn:textAnnotation>
+<bpmn:textAnnotation id="an_end"><bpmn:text>Keine automatische Zahlung, keine Änderung von Stammdaten</bpmn:text></bpmn:textAnnotation>
+<bpmn:association id="Assoc_an_agent" sourceRef="t_agent" targetRef="an_agent" />
+<bpmn:association id="Assoc_an_end" sourceRef="e_done" targetRef="an_end" />
+</bpmn:process>
+<bpmndi:BPMNDiagram id="Diagram_Fall08"><bpmndi:BPMNPlane id="Plane_Fall08" bpmnElement="Collab_Fall08">
+<bpmndi:BPMNShape id="P_Lief_di" bpmnElement="P_Lief" isHorizontal="true"><dc:Bounds x="100" y="60" width="560" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_SB_di" bpmnElement="P_SB" isHorizontal="true"><dc:Bounds x="2150" y="60" width="950" height="200" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Sys_di" bpmnElement="P_Sys" isHorizontal="true"><dc:Bounds x="100" y="320" width="3000" height="670" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="L_n8n_di" bpmnElement="L_n8n" isHorizontal="true"><dc:Bounds x="130" y="320" width="2970" height="190" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="L_pd_di" bpmnElement="L_pd" isHorizontal="true"><dc:Bounds x="130" y="510" width="2970" height="310" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="L_ag_di" bpmnElement="L_ag" isHorizontal="true"><dc:Bounds x="130" y="820" width="2970" height="170" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="s_start_di" bpmnElement="s_start"><dc:Bounds x="207" y="417" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="170" y="458.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="g_rech_di" bpmnElement="g_rech" isMarkerVisible="true"><dc:Bounds x="355" y="410" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="325" y="378.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="e_keine_di" bpmnElement="e_keine"><dc:Bounds x="517" y="337" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="480" y="378.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="g_dopp_di" bpmnElement="g_dopp" isMarkerVisible="true"><dc:Bounds x="665" y="410" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="635" y="378.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="e_skip_di" bpmnElement="e_skip"><dc:Bounds x="827" y="337" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="790" y="378.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_lesen_di" bpmnElement="t_lesen"><dc:Bounds x="785" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_lief_di" bpmnElement="t_lief"><dc:Bounds x="940" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_best_di" bpmnElement="t_best"><dc:Bounds x="1095" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_form_di" bpmnElement="t_form"><dc:Bounds x="1250" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_regel_di" bpmnElement="t_regel"><dc:Bounds x="1405" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="g_mode_di" bpmnElement="g_mode" isMarkerVisible="true"><dc:Bounds x="1595" y="410" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1565" y="378.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_agent_di" bpmnElement="t_agent"><dc:Bounds x="1715" y="850" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="b_timer_di" bpmnElement="b_timer"><dc:Bounds x="1792" y="912" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1755.0" y="953.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="g_ma_di" bpmnElement="g_ma" isMarkerVisible="true"><dc:Bounds x="1905" y="865" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1875" y="833.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="g_mb_di" bpmnElement="g_mb" isMarkerVisible="true"><dc:Bounds x="2060" y="590" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="2030" y="558.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_valid_di" bpmnElement="t_valid"><dc:Bounds x="2180" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_mail_di" bpmnElement="t_mail"><dc:Bounds x="2335" y="395" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_recv_di" bpmnElement="t_recv"><dc:Bounds x="2645" y="395" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="t_prot_di" bpmnElement="t_prot"><dc:Bounds x="2800" y="575" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="e_done_di" bpmnElement="e_done"><dc:Bounds x="2997" y="597" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2960" y="638.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ds_data_di" bpmnElement="ds_data"><dc:Bounds x="1052" y="720" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1007" y="775.0" width="140" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ds_cfg_di" bpmnElement="ds_cfg"><dc:Bounds x="1362" y="720" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1317" y="775.0" width="140" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ds_log_di" bpmnElement="ds_log"><dc:Bounds x="2835" y="720" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="2790" y="775.0" width="140" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="sb_start_di" bpmnElement="sb_start"><dc:Bounds x="2382" y="142" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2345" y="183.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="sb_task_di" bpmnElement="sb_task"><dc:Bounds x="2495" y="120" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="sb_end_di" bpmnElement="sb_end"><dc:Bounds x="2692" y="142" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="2655" y="183.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="an_agent_di" bpmnElement="an_agent"><dc:Bounds x="1180" y="860" width="330" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="an_end_di" bpmnElement="an_end"><dc:Bounds x="2840" y="345" width="230" height="45" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="an_sb_di" bpmnElement="an_sb"><dc:Bounds x="2790" y="80" width="290" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNEdge id="Flow_s_start_g_rech_di" bpmnElement="Flow_s_start_g_rech"><di:waypoint x="243" y="435" /><di:waypoint x="355" y="435" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_rech_e_keine_di" bpmnElement="Flow_g_rech_e_keine"><di:waypoint x="380" y="410" /><di:waypoint x="380" y="355" /><di:waypoint x="517" y="355" /><bpmndi:BPMNLabel><dc:Bounds x="390" y="335" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_rech_g_dopp_di" bpmnElement="Flow_g_rech_g_dopp"><di:waypoint x="405" y="435" /><di:waypoint x="665" y="435" /><bpmndi:BPMNLabel><dc:Bounds x="500" y="415" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_dopp_e_skip_di" bpmnElement="Flow_g_dopp_e_skip"><di:waypoint x="690" y="410" /><di:waypoint x="690" y="355" /><di:waypoint x="827" y="355" /><bpmndi:BPMNLabel><dc:Bounds x="700" y="335" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_dopp_t_lesen_di" bpmnElement="Flow_g_dopp_t_lesen"><di:waypoint x="690" y="460" /><di:waypoint x="690" y="615" /><di:waypoint x="785" y="615" /><bpmndi:BPMNLabel><dc:Bounds x="700" y="595" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_lesen_t_lief_di" bpmnElement="Flow_t_lesen_t_lief"><di:waypoint x="905" y="615" /><di:waypoint x="940" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_lief_t_best_di" bpmnElement="Flow_t_lief_t_best"><di:waypoint x="1060" y="615" /><di:waypoint x="1095" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_best_t_form_di" bpmnElement="Flow_t_best_t_form"><di:waypoint x="1215" y="615" /><di:waypoint x="1250" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_form_t_regel_di" bpmnElement="Flow_t_form_t_regel"><di:waypoint x="1370" y="615" /><di:waypoint x="1405" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_regel_g_mode_di" bpmnElement="Flow_t_regel_g_mode"><di:waypoint x="1525" y="615" /><di:waypoint x="1560" y="615" /><di:waypoint x="1560" y="435" /><di:waypoint x="1595" y="435" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_mode_t_agent_di" bpmnElement="Flow_g_mode_t_agent"><di:waypoint x="1620" y="460" /><di:waypoint x="1620" y="890" /><di:waypoint x="1715" y="890" /><bpmndi:BPMNLabel><dc:Bounds x="1630" y="870" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_mode_g_mb_di" bpmnElement="Flow_g_mode_g_mb"><di:waypoint x="1645" y="435" /><di:waypoint x="2085" y="435" /><di:waypoint x="2085" y="590" /><bpmndi:BPMNLabel><dc:Bounds x="1655" y="415" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_agent_g_ma_di" bpmnElement="Flow_t_agent_g_ma"><di:waypoint x="1835" y="890" /><di:waypoint x="1905" y="890" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_b_timer_g_ma_di" bpmnElement="Flow_b_timer_g_ma"><di:waypoint x="1810" y="948" /><di:waypoint x="1810" y="978" /><di:waypoint x="1930" y="978" /><di:waypoint x="1930" y="915" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_ma_g_mb_di" bpmnElement="Flow_g_ma_g_mb"><di:waypoint x="1930" y="865" /><di:waypoint x="1930" y="615" /><di:waypoint x="2060" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_g_mb_t_valid_di" bpmnElement="Flow_g_mb_t_valid"><di:waypoint x="2110" y="615" /><di:waypoint x="2180" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_valid_t_mail_di" bpmnElement="Flow_t_valid_t_mail"><di:waypoint x="2300" y="615" /><di:waypoint x="2318" y="615" /><di:waypoint x="2318" y="435" /><di:waypoint x="2335" y="435" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_mail_t_recv_di" bpmnElement="Flow_t_mail_t_recv"><di:waypoint x="2455" y="435" /><di:waypoint x="2645" y="435" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_recv_t_prot_di" bpmnElement="Flow_t_recv_t_prot"><di:waypoint x="2765" y="435" /><di:waypoint x="2782" y="435" /><di:waypoint x="2782" y="615" /><di:waypoint x="2800" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_t_prot_e_done_di" bpmnElement="Flow_t_prot_e_done"><di:waypoint x="2920" y="615" /><di:waypoint x="2997" y="615" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_sb_start_sb_task_di" bpmnElement="Flow_sb_start_sb_task"><di:waypoint x="2418" y="160" /><di:waypoint x="2495" y="160" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_sb_task_sb_end_di" bpmnElement="Flow_sb_task_sb_end"><di:waypoint x="2615" y="160" /><di:waypoint x="2692" y="160" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_P_Lief_s_start_di" bpmnElement="Msg_P_Lief_s_start"><di:waypoint x="225" y="120" /><di:waypoint x="225" y="417" /><bpmndi:BPMNLabel><dc:Bounds x="231" y="262" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_t_mail_sb_start_di" bpmnElement="Msg_t_mail_sb_start"><di:waypoint x="2395" y="395" /><di:waypoint x="2395" y="286" /><di:waypoint x="2400" y="286" /><di:waypoint x="2400" y="178" /><bpmndi:BPMNLabel><dc:Bounds x="2401" y="334" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_sb_end_t_recv_di" bpmnElement="Msg_sb_end_t_recv"><di:waypoint x="2710" y="178" /><di:waypoint x="2710" y="286" /><di:waypoint x="2705" y="286" /><di:waypoint x="2705" y="395" /><bpmndi:BPMNLabel><dc:Bounds x="2716" y="225" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DIA_ds_data_t_lief_di" bpmnElement="DIA_ds_data_t_lief"><di:waypoint x="1077" y="720" /><di:waypoint x="1000" y="655" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DIA_ds_data_t_best_di" bpmnElement="DIA_ds_data_t_best"><di:waypoint x="1077" y="720" /><di:waypoint x="1155" y="655" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DIA_ds_cfg_t_form_di" bpmnElement="DIA_ds_cfg_t_form"><di:waypoint x="1387" y="720" /><di:waypoint x="1310" y="655" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DOA_t_prot_ds_log_di" bpmnElement="DOA_t_prot_ds_log"><di:waypoint x="2860" y="655" /><di:waypoint x="2860" y="720" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Assoc_an_agent_di" bpmnElement="Assoc_an_agent"><di:waypoint x="1715" y="890" /><di:waypoint x="1510" y="890" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Assoc_an_end_di" bpmnElement="Assoc_an_end"><di:waypoint x="3015" y="597" /><di:waypoint x="2860" y="390" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Assoc_an_sb_di" bpmnElement="Assoc_an_sb"><di:waypoint x="2728" y="160" /><di:waypoint x="2790" y="110" /></bpmndi:BPMNEdge>
+</bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

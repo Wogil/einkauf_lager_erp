@@ -1,1 +1,17 @@
+# macOS
 .DS_Store
+
+# Szenario-Daten aus dem Kursmaterial – nicht ins öffentliche Repo
+/companies/
+/world/
+/cases/
+/08_eingangsrechnungen/
+
+# Zugangsdaten
+.env
+**/.env
+
+# Python / Node
+__pycache__/
+*.pyc
+node_modules/

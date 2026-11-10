@@ -1,0 +1,784 @@
+{
+  "id": "Fall08Eingang0001",
+  "name": "Fall 08 – Rechnungseingang",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rechnungseingang",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "Webhook: .eml einliefern",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ed8cc417-b4f4-5933-af83-87ba3aedc6ff",
+      "webhookId": "5e0c7d4e-08a1-4c1e-9d55-rechnungsein"
+    },
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "nothing",
+        "format": "raw",
+        "options": {}
+      },
+      "name": "IMAP: Postfach rechnungseingang@",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        0,
+        220
+      ],
+      "id": "bbcd03d0-50cd-5a9b-a767-9ba7e267f4d1",
+      "disabled": true,
+      "notes": "Für den Echtbetrieb: IMAP-Zugangsdaten hinterlegen und Knoten aktivieren."
+    },
+    {
+      "parameters": {
+        "jsCode": "// .eml aus dem Upload (Feld \"datei\") als Base64 an den Prüfdienst geben – Inhalt wird hier nicht gelesen\nconst out = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const keys = Object.keys(items[i].binary || {});\n  if (!keys.length) throw new Error('Keine .eml im Request (multipart-Feld \"datei\" erwartet)');\n  const buf = await this.helpers.getBinaryDataBuffer(i, keys[0]);\n  out.push({ json: { raw_base64: buf.toString('base64'), quelle: 'email' } });\n}\nreturn out;"
+      },
+      "name": "Eml aus Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "6e3210ec-6b00-5c66-9604-b62b93abbc48"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(i => ({ json: { raw_base64: i.json.raw, quelle: 'email' } }));"
+      },
+      "name": "Eml aus IMAP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        220
+      ],
+      "id": "9976e8de-f86f-5385-8f69-cd96449960b7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/eingang",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ raw_base64: $json.raw_base64, quelle: $json.quelle }) }}"
+      },
+      "name": "Prüfdienst: Mail einliefern",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ],
+      "id": "861596ac-a7d5-5cf3-bdb6-b7137d9f8ff5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $json.ist_rechnung === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Enthält Rechnung?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ],
+      "id": "867170a3-ed68-5e99-b3f2-d1dd190d2417"
+    },
+    {
+      "parameters": {},
+      "name": "Keine Rechnung – nur protokolliert",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        960,
+        260
+      ],
+      "id": "83e78f12-3164-535b-8bd1-c9288fe5e3ed"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $json.bereits_verarbeitet === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Schon verarbeitet?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        40
+      ],
+      "id": "0ec3056e-a86b-57c0-b454-6f4c341ac45f"
+    },
+    {
+      "parameters": {},
+      "name": "Bereits verarbeitet – übersprungen",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        300
+      ],
+      "id": "b11b0b0d-f854-5e21-888b-65b57cb88f68",
+      "notes": "Gleiche Message-ID wurde schon geprüft. Zum erneuten Testen: scripts/reset_testdaten.sh"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $env.PRUEFMODUS === 'srw' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Modus SRW?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "d1fcd9a6-2c4e-5404-b7cf-c328aeb20ca7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/vorgang/{{ $('Prüfdienst: Mail einliefern').item.json.vorgang_id }}/regelpruefung",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Regelprüfung (Baseline)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        160
+      ],
+      "id": "7c29ffbb-9b6e-57e2-b3a6-47f3a8dda804"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SRW_API_URL }}/api/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SRW_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ description: 'Eingangsrechnung prüfen – Vorgang ' + $json.vorgang_id + ' (' + ($json.rechnungen || []).length + ' Rechnung/en)', expert: $env.SRW_EXPERT, project_id: $env.SRW_PROJECT_ID || undefined, workspace: null, use_datasource_defaults: true, kickoff_message: 'Prüfe Vorgang ' + $json.vorgang_id + ' mit den MCP-Tools des Prüfdienstes: lese_vorgang, pruefe_rechnung je Rechnung, speichere_vorschlag je Rechnung. Gib bei speichere_vorschlag srw_job_id nicht an, wenn du sie nicht kennst.', context: { vorgang_id: $json.vorgang_id, rechnungen: $json.rechnungen } }) }}"
+      },
+      "name": "SRW: Job starten",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        -160
+      ],
+      "id": "71d76e41-d7b1-58ea-ba45-3cbf2eafe65a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/vorgang/{{ $('Prüfdienst: Mail einliefern').item.json.vorgang_id }}/srw-job",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ job_id: $json.id || $json.job_id }) }}"
+      },
+      "name": "Job-ID beim Vorgang merken",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        -160
+      ],
+      "id": "a00581cc-0084-5697-9e0a-5c71c12c7bc7"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "name": "30 s warten",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        -160
+      ],
+      "id": "0f3b4494-490a-59d2-b4c4-cabbff23d15d",
+      "webhookId": "7a1f3c22-wait-srw-job-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SRW_API_URL }}/api/jobs/{{ $('SRW: Job starten').item.json.id || $('SRW: Job starten').item.json.job_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SRW_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "SRW: Job-Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        -160
+      ],
+      "id": "b8ea8c8d-a36b-543e-8afb-f08f96560800"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ ['completed','pending_review','failed','cancelled'].includes($json.status) || $runIndex >= 60 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Job fertig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        -160
+      ],
+      "id": "575fa502-4a96-503e-8093-9ecfef862f16"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/vorgang/{{ $('Prüfdienst: Mail einliefern').item.json.vorgang_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Vorschläge vorhanden?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        -160
+      ],
+      "id": "51c34589-51de-57a4-8918-0a7cbeeb7871"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $json.vollstaendig === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Agent hat alle Vorschläge gespeichert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        -160
+      ],
+      "id": "1b626d7d-fb09-53af-8ad3-195d882578bc"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/vorgang/{{ $('Prüfdienst: Mail einliefern').item.json.vorgang_id }}/regelpruefung",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Rückfallebene: Regelprüfung",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        -40
+      ],
+      "id": "426a7508-12aa-58bc-88ab-394f7b629010"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/vorgang/{{ $('Prüfdienst: Mail einliefern').item.json.vorgang_id }}/benachrichtigungen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "name": "Benachrichtigungen holen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        40
+      ],
+      "id": "1ed0971e-760f-5856-98e2-8b3b988f598a",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "benachrichtigungen",
+        "options": {}
+      },
+      "name": "Je Rechnung",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        40
+      ],
+      "id": "be627516-f743-5ec0-b979-59cc271768f0"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MAIL_API_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ From: { Email: $env.MAIL_ABSENDER, Name: 'Rechnungsprüfung (Fall 08)' }, To: [ { Email: $json.an_email, Name: $json.an_name } ], Subject: $json.betreff, HTML: $json.html, Tags: [ $json.entscheidung ] }) }}"
+      },
+      "name": "Mail an zuständige Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3600,
+        40
+      ],
+      "id": "58737aa1-853b-5fff-bdec-cfdfa2316127",
+      "notes": "Prototyp: Versand über die Mailpit-API. Im Echtbetrieb durch „Send Email“ (SMTP), Outlook oder Teams ersetzen – der Inhalt kommt fertig vom Prüfdienst."
+    }
+  ],
+  "connections": {
+    "Webhook: .eml einliefern": {
+      "main": [
+        [
+          {
+            "node": "Eml aus Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IMAP: Postfach rechnungseingang@": {
+      "main": [
+        [
+          {
+            "node": "Eml aus IMAP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eml aus Upload": {
+      "main": [
+        [
+          {
+            "node": "Prüfdienst: Mail einliefern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eml aus IMAP": {
+      "main": [
+        [
+          {
+            "node": "Prüfdienst: Mail einliefern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prüfdienst: Mail einliefern": {
+      "main": [
+        [
+          {
+            "node": "Enthält Rechnung?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enthält Rechnung?": {
+      "main": [
+        [
+          {
+            "node": "Schon verarbeitet?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Keine Rechnung – nur protokolliert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schon verarbeitet?": {
+      "main": [
+        [
+          {
+            "node": "Bereits verarbeitet – übersprungen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Modus SRW?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modus SRW?": {
+      "main": [
+        [
+          {
+            "node": "SRW: Job starten",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Regelprüfung (Baseline)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SRW: Job starten": {
+      "main": [
+        [
+          {
+            "node": "Job-ID beim Vorgang merken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job-ID beim Vorgang merken": {
+      "main": [
+        [
+          {
+            "node": "30 s warten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "30 s warten": {
+      "main": [
+        [
+          {
+            "node": "SRW: Job-Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SRW: Job-Status": {
+      "main": [
+        [
+          {
+            "node": "Job fertig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job fertig?": {
+      "main": [
+        [
+          {
+            "node": "Vorschläge vorhanden?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "30 s warten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorschläge vorhanden?": {
+      "main": [
+        [
+          {
+            "node": "Agent hat alle Vorschläge gespeichert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent hat alle Vorschläge gespeichert?": {
+      "main": [
+        [
+          {
+            "node": "Benachrichtigungen holen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rückfallebene: Regelprüfung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rückfallebene: Regelprüfung": {
+      "main": [
+        [
+          {
+            "node": "Benachrichtigungen holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Regelprüfung (Baseline)": {
+      "main": [
+        [
+          {
+            "node": "Benachrichtigungen holen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Benachrichtigungen holen": {
+      "main": [
+        [
+          {
+            "node": "Je Rechnung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Je Rechnung": {
+      "main": [
+        [
+          {
+            "node": "Mail an zuständige Person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all"
+  },
+  "pinData": {},
+  "tags": []
+}

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs_Team" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Fall08-Generator" exporterVersion="1.0">
+<bpmn:collaboration id="Collab_Team" name="Team 2 – Gemeinsame Grundlage (Übersicht)">
+<bpmn:participant id="P_Absender" name="Absender (Mail, Upload, Chat)" />
+<bpmn:participant id="P_Weitere" name="Weitere Fachagenten (Angebot, Einkauf)" />
+<bpmn:participant id="P_SB" name="Sachbearbeitung / Anfragende (erhält Ergebnis)" />
+<bpmn:participant id="P_Orch" name="Plattform – Orchestrierung (generisch)" processRef="Process_P_Orch" />
+<bpmn:participant id="P_Agent" name="Fachagent Rechnungsprüfung (Fall 08)" processRef="Process_P_Agent" />
+<bpmn:messageFlow id="Msg_P_Absender_o_start" name="Vorgang" sourceRef="P_Absender" targetRef="o_start" />
+<bpmn:messageFlow id="Msg_o_weitere_P_Weitere" name="Auftrag" sourceRef="o_weitere" targetRef="P_Weitere" />
+<bpmn:messageFlow id="Msg_P_Weitere_o_recv" name="Ergebnis" sourceRef="P_Weitere" targetRef="o_recv" />
+<bpmn:messageFlow id="Msg_o_rech_a_start" name="Auftrag" sourceRef="o_rech" targetRef="a_start" />
+<bpmn:messageFlow id="Msg_a_end_o_recv" name="Vorschlag" sourceRef="a_end" targetRef="o_recv" />
+<bpmn:messageFlow id="Msg_o_send_P_SB" name="Ergebnis / Vorschlag" sourceRef="o_send" targetRef="P_SB" />
+</bpmn:collaboration>
+<bpmn:process id="Process_P_Orch" isExecutable="false">
+<bpmn:startEvent id="o_start" name="Geschäftsvorgang geht ein"><bpmn:outgoing>Flow_o_start_o_norm</bpmn:outgoing><bpmn:messageEventDefinition id="MED_o_start" /></bpmn:startEvent>
+<bpmn:task id="o_norm" name="Eingang normalisieren (Kanal-Adapter)"><bpmn:incoming>Flow_o_start_o_norm</bpmn:incoming><bpmn:outgoing>Flow_o_norm_o_art</bpmn:outgoing></bpmn:task>
+<bpmn:task id="o_art" name="Vorgangsart erkennen"><bpmn:incoming>Flow_o_norm_o_art</bpmn:incoming><bpmn:outgoing>Flow_o_art_o_gw</bpmn:outgoing></bpmn:task>
+<bpmn:exclusiveGateway id="o_gw" name="Vorgangsart?"><bpmn:incoming>Flow_o_art_o_gw</bpmn:incoming><bpmn:outgoing>Flow_o_gw_o_weitere</bpmn:outgoing><bpmn:outgoing>Flow_o_gw_o_rech</bpmn:outgoing><bpmn:outgoing>Flow_o_gw_o_manuell</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:sendTask id="o_weitere" name="Fachagent Angebot / Einkauf beauftragen"><bpmn:incoming>Flow_o_gw_o_weitere</bpmn:incoming><bpmn:outgoing>Flow_o_weitere_o_m1</bpmn:outgoing></bpmn:sendTask>
+<bpmn:sendTask id="o_rech" name="Rechnungs-Agent beauftragen"><bpmn:incoming>Flow_o_gw_o_rech</bpmn:incoming><bpmn:outgoing>Flow_o_rech_o_m1</bpmn:outgoing></bpmn:sendTask>
+<bpmn:task id="o_manuell" name="Als manuell zu bearbeiten kennzeichnen"><bpmn:incoming>Flow_o_gw_o_manuell</bpmn:incoming><bpmn:outgoing>Flow_o_manuell_o_m3</bpmn:outgoing></bpmn:task>
+<bpmn:exclusiveGateway id="o_m1" name=""><bpmn:incoming>Flow_o_weitere_o_m1</bpmn:incoming><bpmn:incoming>Flow_o_rech_o_m1</bpmn:incoming><bpmn:outgoing>Flow_o_m1_o_recv</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:receiveTask id="o_recv" name="Ergebnis empfangen"><bpmn:incoming>Flow_o_m1_o_recv</bpmn:incoming><bpmn:outgoing>Flow_o_recv_o_m2</bpmn:outgoing></bpmn:receiveTask>
+<bpmn:boundaryEvent id="o_timer" name="Zeitlimit" attachedToRef="o_recv"><bpmn:outgoing>Flow_o_timer_o_fallback</bpmn:outgoing><bpmn:timerEventDefinition id="TED_o_timer"><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:boundaryEvent>
+<bpmn:task id="o_fallback" name="Rückfallebene: Regelergebnis verwenden"><bpmn:incoming>Flow_o_timer_o_fallback</bpmn:incoming><bpmn:outgoing>Flow_o_fallback_o_m2</bpmn:outgoing></bpmn:task>
+<bpmn:exclusiveGateway id="o_m2" name=""><bpmn:incoming>Flow_o_recv_o_m2</bpmn:incoming><bpmn:incoming>Flow_o_fallback_o_m2</bpmn:incoming><bpmn:outgoing>Flow_o_m2_o_m3</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:exclusiveGateway id="o_m3" name=""><bpmn:incoming>Flow_o_m2_o_m3</bpmn:incoming><bpmn:incoming>Flow_o_manuell_o_m3</bpmn:incoming><bpmn:outgoing>Flow_o_m3_o_send</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:sendTask id="o_send" name="Ergebnis zustellen"><bpmn:incoming>Flow_o_m3_o_send</bpmn:incoming><bpmn:outgoing>Flow_o_send_o_end</bpmn:outgoing></bpmn:sendTask>
+<bpmn:endEvent id="o_end" name="Vorgang übergeben"><bpmn:incoming>Flow_o_send_o_end</bpmn:incoming></bpmn:endEvent>
+<bpmn:sequenceFlow id="Flow_o_start_o_norm" sourceRef="o_start" targetRef="o_norm" />
+<bpmn:sequenceFlow id="Flow_o_norm_o_art" sourceRef="o_norm" targetRef="o_art" />
+<bpmn:sequenceFlow id="Flow_o_art_o_gw" sourceRef="o_art" targetRef="o_gw" />
+<bpmn:sequenceFlow id="Flow_o_gw_o_weitere" name="Angebot / Einkauf" sourceRef="o_gw" targetRef="o_weitere" />
+<bpmn:sequenceFlow id="Flow_o_gw_o_rech" name="Rechnung" sourceRef="o_gw" targetRef="o_rech" />
+<bpmn:sequenceFlow id="Flow_o_gw_o_manuell" name="nicht zuordenbar" sourceRef="o_gw" targetRef="o_manuell" />
+<bpmn:sequenceFlow id="Flow_o_weitere_o_m1" sourceRef="o_weitere" targetRef="o_m1" />
+<bpmn:sequenceFlow id="Flow_o_rech_o_m1" sourceRef="o_rech" targetRef="o_m1" />
+<bpmn:sequenceFlow id="Flow_o_m1_o_recv" sourceRef="o_m1" targetRef="o_recv" />
+<bpmn:sequenceFlow id="Flow_o_recv_o_m2" sourceRef="o_recv" targetRef="o_m2" />
+<bpmn:sequenceFlow id="Flow_o_timer_o_fallback" sourceRef="o_timer" targetRef="o_fallback" />
+<bpmn:sequenceFlow id="Flow_o_fallback_o_m2" sourceRef="o_fallback" targetRef="o_m2" />
+<bpmn:sequenceFlow id="Flow_o_m2_o_m3" sourceRef="o_m2" targetRef="o_m3" />
+<bpmn:sequenceFlow id="Flow_o_manuell_o_m3" sourceRef="o_manuell" targetRef="o_m3" />
+<bpmn:sequenceFlow id="Flow_o_m3_o_send" sourceRef="o_m3" targetRef="o_send" />
+<bpmn:sequenceFlow id="Flow_o_send_o_end" sourceRef="o_send" targetRef="o_end" />
+<bpmn:textAnnotation id="a_routing"><bpmn:text>Bei Mail-Eingang deterministisch (z. B. XRechnung-Anhang), LLM-Routing nur bei freien Chat-Anfragen</bpmn:text></bpmn:textAnnotation>
+<bpmn:association id="Assoc_a_routing" sourceRef="o_art" targetRef="a_routing" />
+</bpmn:process>
+<bpmn:process id="Process_P_Agent" isExecutable="false">
+<bpmn:startEvent id="a_start" name="Auftrag erhalten"><bpmn:outgoing>Flow_a_start_a_cfg</bpmn:outgoing><bpmn:messageEventDefinition id="MED_a_start" /></bpmn:startEvent>
+<bpmn:task id="a_cfg" name="Mandanten-Konfiguration laden"><bpmn:incoming>Flow_a_start_a_cfg</bpmn:incoming><bpmn:outgoing>Flow_a_cfg_a_data</bpmn:outgoing><bpmn:property id="Prop_a_cfg_ds_cfg" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DIA_ds_cfg_a_cfg"><bpmn:sourceRef>ds_cfg</bpmn:sourceRef><bpmn:targetRef>Prop_a_cfg_ds_cfg</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:task>
+<bpmn:task id="a_data" name="Daten über Adapter abrufen"><bpmn:incoming>Flow_a_cfg_a_data</bpmn:incoming><bpmn:outgoing>Flow_a_data_a_rules</bpmn:outgoing><bpmn:property id="Prop_a_data_ds_data" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DIA_ds_data_a_data"><bpmn:sourceRef>ds_data</bpmn:sourceRef><bpmn:targetRef>Prop_a_data_ds_data</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:task>
+<bpmn:task id="a_rules" name="Regelprüfung (deterministisch)"><bpmn:incoming>Flow_a_data_a_rules</bpmn:incoming><bpmn:outgoing>Flow_a_rules_a_llm</bpmn:outgoing></bpmn:task>
+<bpmn:task id="a_llm" name="Befunde abwägen und begründen (LLM)"><bpmn:incoming>Flow_a_rules_a_llm</bpmn:incoming><bpmn:outgoing>Flow_a_llm_a_val</bpmn:outgoing></bpmn:task>
+<bpmn:task id="a_val" name="Vorschlag validieren (Leitplanken)"><bpmn:incoming>Flow_a_llm_a_val</bpmn:incoming><bpmn:outgoing>Flow_a_val_a_end</bpmn:outgoing></bpmn:task>
+<bpmn:endEvent id="a_end" name="Vorschlag senden"><bpmn:incoming>Flow_a_val_a_end</bpmn:incoming><bpmn:messageEventDefinition id="MED_a_end" /></bpmn:endEvent>
+<bpmn:dataStoreReference id="ds_cfg" name="Mandanten-Konfiguration (Grenzen, Regeln, Kontierung)" />
+<bpmn:dataStoreReference id="ds_data" name="Unternehmensdaten (ERP, CSV, Register …)" />
+<bpmn:sequenceFlow id="Flow_a_start_a_cfg" sourceRef="a_start" targetRef="a_cfg" />
+<bpmn:sequenceFlow id="Flow_a_cfg_a_data" sourceRef="a_cfg" targetRef="a_data" />
+<bpmn:sequenceFlow id="Flow_a_data_a_rules" sourceRef="a_data" targetRef="a_rules" />
+<bpmn:sequenceFlow id="Flow_a_rules_a_llm" sourceRef="a_rules" targetRef="a_llm" />
+<bpmn:sequenceFlow id="Flow_a_llm_a_val" sourceRef="a_llm" targetRef="a_val" />
+<bpmn:sequenceFlow id="Flow_a_val_a_end" sourceRef="a_val" targetRef="a_end" />
+<bpmn:textAnnotation id="a_trenn"><bpmn:text>Generisch: Ablauf, Prüfschritte, Agent, Leitplanken. Mandantenspezifisch: nur Konfiguration und Daten-Adapter</bpmn:text></bpmn:textAnnotation>
+</bpmn:process>
+<bpmndi:BPMNDiagram id="Diagram_Team"><bpmndi:BPMNPlane id="Plane_Team" bpmnElement="Collab_Team">
+<bpmndi:BPMNShape id="P_Absender_di" bpmnElement="P_Absender" isHorizontal="true"><dc:Bounds x="100" y="80" width="460" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Weitere_di" bpmnElement="P_Weitere" isHorizontal="true"><dc:Bounds x="640" y="80" width="460" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_SB_di" bpmnElement="P_SB" isHorizontal="true"><dc:Bounds x="1180" y="80" width="920" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Orch_di" bpmnElement="P_Orch" isHorizontal="true"><dc:Bounds x="100" y="200" width="2000" height="360" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Agent_di" bpmnElement="P_Agent" isHorizontal="true"><dc:Bounds x="640" y="620" width="1460" height="300" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_start_di" bpmnElement="o_start"><dc:Bounds x="177" y="362" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="140" y="403.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_norm_di" bpmnElement="o_norm"><dc:Bounds x="290" y="340" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_art_di" bpmnElement="o_art"><dc:Bounds x="445" y="340" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_gw_di" bpmnElement="o_gw" isMarkerVisible="true"><dc:Bounds x="635" y="355" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="605" y="323.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_weitere_di" bpmnElement="o_weitere"><dc:Bounds x="755" y="230" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_rech_di" bpmnElement="o_rech"><dc:Bounds x="755" y="340" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_manuell_di" bpmnElement="o_manuell"><dc:Bounds x="910" y="450" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_m1_di" bpmnElement="o_m1" isMarkerVisible="true"><dc:Bounds x="945" y="300" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="915" y="268.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_recv_di" bpmnElement="o_recv"><dc:Bounds x="1065" y="285" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_timer_di" bpmnElement="o_timer"><dc:Bounds x="1142" y="347" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1105.0" y="388.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_fallback_di" bpmnElement="o_fallback"><dc:Bounds x="1220" y="380" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_m2_di" bpmnElement="o_m2" isMarkerVisible="true"><dc:Bounds x="1410" y="300" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1380" y="268.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_m3_di" bpmnElement="o_m3" isMarkerVisible="true"><dc:Bounds x="1565" y="300" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1535" y="268.0" width="110" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_send_di" bpmnElement="o_send"><dc:Bounds x="1685" y="285" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="o_end_di" bpmnElement="o_end"><dc:Bounds x="1882" y="307" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1845" y="348.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_start_di" bpmnElement="a_start"><dc:Bounds x="717" y="697" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="680" y="738.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_cfg_di" bpmnElement="a_cfg"><dc:Bounds x="830" y="675" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_data_di" bpmnElement="a_data"><dc:Bounds x="985" y="675" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_rules_di" bpmnElement="a_rules"><dc:Bounds x="1140" y="675" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_llm_di" bpmnElement="a_llm"><dc:Bounds x="1295" y="675" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_val_di" bpmnElement="a_val"><dc:Bounds x="1450" y="675" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_end_di" bpmnElement="a_end"><dc:Bounds x="1647" y="697" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1610" y="738.0" width="110" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ds_cfg_di" bpmnElement="ds_cfg"><dc:Bounds x="865" y="820" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="820" y="875.0" width="140" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="ds_data_di" bpmnElement="ds_data"><dc:Bounds x="1020" y="820" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="975" y="875.0" width="140" height="40" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_routing_di" bpmnElement="a_routing"><dc:Bounds x="330" y="455" width="250" height="70" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="a_trenn_di" bpmnElement="a_trenn"><dc:Bounds x="1750" y="800" width="320" height="60" /></bpmndi:BPMNShape>
+<bpmndi:BPMNEdge id="Flow_o_start_o_norm_di" bpmnElement="Flow_o_start_o_norm"><di:waypoint x="213" y="380" /><di:waypoint x="290" y="380" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_norm_o_art_di" bpmnElement="Flow_o_norm_o_art"><di:waypoint x="410" y="380" /><di:waypoint x="445" y="380" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_art_o_gw_di" bpmnElement="Flow_o_art_o_gw"><di:waypoint x="565" y="380" /><di:waypoint x="635" y="380" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_gw_o_weitere_di" bpmnElement="Flow_o_gw_o_weitere"><di:waypoint x="660" y="355" /><di:waypoint x="660" y="270" /><di:waypoint x="755" y="270" /><bpmndi:BPMNLabel><dc:Bounds x="670" y="250" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_gw_o_rech_di" bpmnElement="Flow_o_gw_o_rech"><di:waypoint x="685" y="380" /><di:waypoint x="755" y="380" /><bpmndi:BPMNLabel><dc:Bounds x="685" y="360" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_gw_o_manuell_di" bpmnElement="Flow_o_gw_o_manuell"><di:waypoint x="660" y="405" /><di:waypoint x="660" y="490" /><di:waypoint x="910" y="490" /><bpmndi:BPMNLabel><dc:Bounds x="670" y="470" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_weitere_o_m1_di" bpmnElement="Flow_o_weitere_o_m1"><di:waypoint x="875" y="270" /><di:waypoint x="970" y="270" /><di:waypoint x="970" y="300" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_rech_o_m1_di" bpmnElement="Flow_o_rech_o_m1"><di:waypoint x="875" y="380" /><di:waypoint x="970" y="380" /><di:waypoint x="970" y="350" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_m1_o_recv_di" bpmnElement="Flow_o_m1_o_recv"><di:waypoint x="995" y="325" /><di:waypoint x="1065" y="325" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_recv_o_m2_di" bpmnElement="Flow_o_recv_o_m2"><di:waypoint x="1185" y="325" /><di:waypoint x="1410" y="325" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_timer_o_fallback_di" bpmnElement="Flow_o_timer_o_fallback"><di:waypoint x="1160" y="383" /><di:waypoint x="1160" y="420" /><di:waypoint x="1220" y="420" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_fallback_o_m2_di" bpmnElement="Flow_o_fallback_o_m2"><di:waypoint x="1340" y="420" /><di:waypoint x="1435" y="420" /><di:waypoint x="1435" y="350" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_m2_o_m3_di" bpmnElement="Flow_o_m2_o_m3"><di:waypoint x="1460" y="325" /><di:waypoint x="1565" y="325" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_manuell_o_m3_di" bpmnElement="Flow_o_manuell_o_m3"><di:waypoint x="1030" y="490" /><di:waypoint x="1590" y="490" /><di:waypoint x="1590" y="350" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_m3_o_send_di" bpmnElement="Flow_o_m3_o_send"><di:waypoint x="1615" y="325" /><di:waypoint x="1685" y="325" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_o_send_o_end_di" bpmnElement="Flow_o_send_o_end"><di:waypoint x="1805" y="325" /><di:waypoint x="1882" y="325" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_start_a_cfg_di" bpmnElement="Flow_a_start_a_cfg"><di:waypoint x="753" y="715" /><di:waypoint x="830" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_cfg_a_data_di" bpmnElement="Flow_a_cfg_a_data"><di:waypoint x="950" y="715" /><di:waypoint x="985" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_data_a_rules_di" bpmnElement="Flow_a_data_a_rules"><di:waypoint x="1105" y="715" /><di:waypoint x="1140" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_rules_a_llm_di" bpmnElement="Flow_a_rules_a_llm"><di:waypoint x="1260" y="715" /><di:waypoint x="1295" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_llm_a_val_di" bpmnElement="Flow_a_llm_a_val"><di:waypoint x="1415" y="715" /><di:waypoint x="1450" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Flow_a_val_a_end_di" bpmnElement="Flow_a_val_a_end"><di:waypoint x="1570" y="715" /><di:waypoint x="1647" y="715" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_P_Absender_o_start_di" bpmnElement="Msg_P_Absender_o_start"><di:waypoint x="195" y="140" /><di:waypoint x="195" y="362" /><bpmndi:BPMNLabel><dc:Bounds x="201" y="244" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_o_weitere_P_Weitere_di" bpmnElement="Msg_o_weitere_P_Weitere"><di:waypoint x="815" y="230" /><di:waypoint x="815" y="140" /><bpmndi:BPMNLabel><dc:Bounds x="821" y="178" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_P_Weitere_o_recv_di" bpmnElement="Msg_P_Weitere_o_recv"><di:waypoint x="1050" y="140" /><di:waypoint x="1050" y="212" /><di:waypoint x="1105" y="212" /><di:waypoint x="1105" y="285" /><bpmndi:BPMNLabel><dc:Bounds x="1056" y="169" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_o_rech_a_start_di" bpmnElement="Msg_o_rech_a_start"><di:waypoint x="815" y="420" /><di:waypoint x="815" y="558" /><di:waypoint x="735" y="558" /><di:waypoint x="735" y="697" /><bpmndi:BPMNLabel><dc:Bounds x="821" y="482" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_a_end_o_recv_di" bpmnElement="Msg_a_end_o_recv"><di:waypoint x="1665" y="697" /><di:waypoint x="1665" y="531" /><di:waypoint x="1085" y="531" /><di:waypoint x="1085" y="365" /><bpmndi:BPMNLabel><dc:Bounds x="1671" y="607" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Msg_o_send_P_SB_di" bpmnElement="Msg_o_send_P_SB"><di:waypoint x="1745" y="285" /><di:waypoint x="1745" y="140" /><bpmndi:BPMNLabel><dc:Bounds x="1751" y="206" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DIA_ds_cfg_a_cfg_di" bpmnElement="DIA_ds_cfg_a_cfg"><di:waypoint x="890" y="820" /><di:waypoint x="890" y="755" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DIA_ds_data_a_data_di" bpmnElement="DIA_ds_data_a_data"><di:waypoint x="1045" y="820" /><di:waypoint x="1045" y="755" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="Assoc_a_routing_di" bpmnElement="Assoc_a_routing"><di:waypoint x="505" y="420" /><di:waypoint x="350" y="455" /></bpmndi:BPMNEdge>
+</bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

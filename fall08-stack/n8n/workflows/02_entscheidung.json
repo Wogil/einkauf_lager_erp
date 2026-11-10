@@ -1,0 +1,226 @@
+{
+  "id": "Fall08Entsch00002",
+  "name": "Fall 08 – Entscheidung aus Mail",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "entscheidung",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: Entscheidung",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9d36a093-42f5-5327-a751-1c55f0ef6b91",
+      "webhookId": "9b2e4c10-entscheidung-0000-000000000001"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PRUEFDIENST_URL }}/api/entscheidung",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.PRUEFDIENST_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ rechnung_id: $json.query.r, aktion: $json.query.a, token: $json.query.t, kommentar: $json.query.k || null }) }}"
+      },
+      "name": "Prüfdienst: Entscheidung speichern",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "09f129e7-9a8f-585e-8442-36460ba9f700",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $('Webhook: Entscheidung').first().json.query || {};\nconst r = $input.first().json;\nconst LABEL = { freigeben: 'Freigeben', klaeren: 'Klären', ablehnen: 'Ablehnen', vorschlag_falsch: 'Vorschlag war falsch' };\nconst esc = s => String(s ?? '').replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nlet inhalt;\nif (r.error || (!r.entscheidung_id && !r.formular)) {\n  inhalt = `<h2>Das hat nicht geklappt</h2><p>Der Link ist ungültig oder wurde verändert. Bitte den Link aus der Mail unverändert öffnen.</p>`;\n} else if (r.formular) {\n  inhalt = `<h2>Danke für die Rückmeldung</h2><p>Was war am Vorschlag falsch? (hilft, den Agenten zu verbessern)</p>\n  <form method=\"get\"><input type=\"hidden\" name=\"r\" value=\"${esc(q.r)}\"><input type=\"hidden\" name=\"a\" value=\"vorschlag_falsch\"><input type=\"hidden\" name=\"t\" value=\"${esc(q.t)}\">\n  <textarea name=\"k\" rows=\"4\" style=\"width:100%;font:inherit\"></textarea><p><button style=\"padding:8px 14px\">Absenden</button></p></form>`;\n} else if (r.aktion === 'vorschlag_falsch') {\n  inhalt = `<h2>Danke!</h2><p>Ihre Rückmeldung zum Vorschlag wurde gespeichert und fließt in die Verbesserung der Prüfung ein.</p>\n  <p>Ihre eigentliche Entscheidung treffen Sie bitte über die Knöpfe in der Mail.</p>`;\n} else {\n  const passt = r.uebereinstimmung ? 'entspricht dem Vorschlag' : `weicht vom Vorschlag „${esc(LABEL[r.vorschlag] || r.vorschlag)}“ ab`;\n  inhalt = `<h2>Gespeichert: ${esc(LABEL[r.aktion] || r.aktion)}</h2><p>Ihre Entscheidung ${passt}. Sie wurde mit Zeitpunkt protokolliert.</p>\n  <p style=\"color:#76746e\">Buchung und Zahlung erfolgen wie gewohnt in WAVE und ZahlWerk.</p>`;\n}\nreturn [{ json: { ...r, html: `<!doctype html><meta charset=\"utf-8\"><title>Rechnungsprüfung</title><div style=\"font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:560px;margin:40px auto;line-height:1.5\">${inhalt}</div>` } }];"
+      },
+      "name": "Antwortseite",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "16262fd7-5f1d-5c51-beb6-3fce0da641b0"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1",
+              "leftValue": "={{ $env.PRUEFMODUS === 'srw' && !!$json.srw_job_id && !!$json.entscheidung_id && $json.aktion !== 'vorschlag_falsch' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "SRW-Job abschließen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "3c30ff07-37ec-5f05-bc41-77b25fed4795"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SRW_API_URL }}/api/jobs/{{ $json.srw_job_id }}/approve",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SRW_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ notes: 'Entscheidung ' + $json.aktion + ' durch ' + ($json.person || 'unbekannt') + ' (Mail-Link)' }) }}"
+      },
+      "name": "SRW: Job freigeben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -120
+      ],
+      "id": "f8752abe-e88a-5622-a06e-5000357d8108",
+      "onError": "continueRegularOutput",
+      "notes": "Nur nötig, wenn der Expert mit autonomy=review läuft. Bei autonomy=full ist der Job schon abgeschlossen."
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('Antwortseite').item.json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Seite anzeigen",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "69f88013-f839-5c37-a3a6-053203b6d5e5"
+    }
+  ],
+  "connections": {
+    "Webhook: Entscheidung": {
+      "main": [
+        [
+          {
+            "node": "Prüfdienst: Entscheidung speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prüfdienst: Entscheidung speichern": {
+      "main": [
+        [
+          {
+            "node": "Antwortseite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antwortseite": {
+      "main": [
+        [
+          {
+            "node": "SRW-Job abschließen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SRW-Job abschließen?": {
+      "main": [
+        [
+          {
+            "node": "SRW: Job freigeben",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Seite anzeigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SRW: Job freigeben": {
+      "main": [
+        [
+          {
+            "node": "Seite anzeigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all"
+  },
+  "pinData": {},
+  "tags": []
+}

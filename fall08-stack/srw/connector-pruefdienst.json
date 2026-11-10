@@ -1,0 +1,13 @@
+{
+  "_hinweis": "POST {SRW_API_URL}/api/datasources mit Authorization: Bearer ak_… – danach dem Projekt zuordnen. Werte in <> ersetzen.",
+  "name": "pruefdienst",
+  "type": "mcp",
+  "description": "Prüfdienst Fall 08: Rechnungen lesen, Regeln prüfen, WAVE/Register nachschlagen, Vorschlag speichern",
+  "connection_url": "https://<öffentliche-adresse-des-pruefdienstes>/mcp/",
+  "credentials": {
+    "transport": "http",
+    "auth": { "type": "bearer", "token": "<PRUEFDIENST_TOKEN>" }
+  },
+  "scope_mode": "projects",
+  "project_ids": ["<SRW_PROJECT_ID>"]
+}
