@@ -7,3 +7,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Erzeugte Datenstände (enthalten Szenario-Daten)
+build/
