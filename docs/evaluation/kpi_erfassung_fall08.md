@@ -1,6 +1,6 @@
 # Konzept: Erfassung der Kennzahlen (B1, C1, D1)
 
-Stand: 13.11.2026 · Entwurf: Betül Alkan (mit KI-Unterstützung, Claude) · Status: zur Abstimmung im Teamcall 13.11.; Umsetzung im Programm: Emin
+Stand: 13.11.2026 · Entwurf: Betül Alkan · Status: zur Abstimmung im Teamcall 13.11.; Umsetzung im Programm: Emin
 
 ## 1. Ziel
 
