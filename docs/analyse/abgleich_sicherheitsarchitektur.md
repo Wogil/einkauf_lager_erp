@@ -1,5 +1,5 @@
 Abgleich: Sichere Architektur für KI-Agenten im Backoffice
-Stand: 08.11.2026 · Erstellt von: Betül Alkan (mit KI-Unterstützung, Claude) · Status: Entwurf zur Besprechung im Team
+Stand: 08.11.2026 · Erstellt von: Betül Alkan · Status: Entwurf zur Besprechung im Team
 Quelle: Gharbi, M.; Magnussen, S. J. (2026): Sichere Architektur für KI-Agenten im Backoffice. heise online / heise developer, 07.11.2026. https://heise.de/-11514414
 
 1. Kernaussagen des Artikels
