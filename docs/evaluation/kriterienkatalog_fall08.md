@@ -1,6 +1,6 @@
 # Kriterienkatalog Fall 08 – Wann wird automatisch freigegeben, wann eskaliert?
 
-Stand: 13.11.2026 · Entwurf: Betül Alkan (mit KI-Unterstützung, Claude) · Status: zur Abstimmung im Teamcall 13.11.
+Stand: 13.11.2026 · Entwurf: Betül Alkan · Status: zur Abstimmung im Teamcall 13.11.
 
 ## 1. Zweck
 
