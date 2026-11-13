@@ -1,6 +1,6 @@
 # Evaluationskonzept Fall 08 – Eingangsrechnungen
 
-Stand: 13.11.2026 · Entwurf: Betül Alkan (mit KI-Unterstützung, Claude) · Status: Entwurf, im Team abzustimmen
+Stand: 13.11.2026 · Entwurf: Betül Alkan · Status: Entwurf, im Team abzustimmen
 
 ## 1. Ziel und Leitfragen
 
