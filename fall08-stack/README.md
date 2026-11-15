@@ -74,6 +74,18 @@ docker compose up -d --build --force-recreate pruefdienst n8n
 
 In n8n kurz prüfen, ob der Workflow „Fall 08 – Rechnungseingang“ den neuen Stand zeigt.
 
+**Kennzahlen exportieren (#44):** Nach einem Testlauf alle Ergebnisse als Tabelle sichern – **vor** `reset_testdaten.sh`,
+das alle Ergebnisse löscht:
+
+```bash
+bash scripts/kpi_export.sh B1-01 B1     # Lauf-ID und Variante (B1, C1 oder D1)
+```
+
+Ergebnis: `exports/kpi_B1-01.csv` (Semikolon, für Excel), eine Zeile je Rechnung mit Befunden, Weg A/B/C laut
+Kriterienkatalog, Regel- und endgültigem Vorschlag, Rückfallebene, Freigabestufe, Kontierung, Skontofrist,
+Verarbeitungsdauer und der Entscheidung des Menschen. Die Kennzahlen (Treffer, Fehlalarme, Klärquote …) werden
+daraus zusammen mit dem Lösungsschlüssel berechnet. `exports/` wird nicht eingecheckt.
+
 ## Prüfmodus
 
 `PRUEFMODUS` in `.env`:

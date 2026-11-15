@@ -7,3 +7,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Kennzahlen-Exporte (enthalten Szenario-Daten, nicht einchecken)
+exports/
